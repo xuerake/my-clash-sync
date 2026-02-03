@@ -12,12 +12,12 @@ jobs:
       - name: 检出仓库代码
         uses: actions/checkout@v3
 
-      - name: 动态抓取并转换链接
+      - name: 抓取并转换链接
         run: |
           # 1. 下载原作者 README
           RAW_README=$(curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md)
           
-          # 2. 提取最新动态链接并清洗特殊字符
+          # 2. 提取最新动态链接
           DYNAMIC_URL=$(echo "$RAW_README" | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+" | head -n 1 | tr -d '\r' | xargs)
           
           echo "捕获到的链接: $DYNAMIC_URL"
@@ -27,11 +27,17 @@ jobs:
             exit 1
           fi
 
-          # 3. 使用转换器后端获取标准 Clash 配置 (解决 Invalid YAML 问题)
-          CONVERT_URL="https://sub.id9.cc/sub?target=clash&url=${DYNAMIC_URL}&insert=false&emoji=true&list=false&tfo=false&scv=false&fdn=false&sort=false"
-          
-          # 下载并保存
-          curl -L "$CONVERT_URL" -H "User-Agent: Clash" -o config.yaml
+          # 3. 尝试多个转换器后端，解决连接超时问题
+          # 备选后端 1 (v1.mk), 备选后端 2 (sub.id9.cc), 备选后端 3 (tsutsu.one)
+          URL1="https://api.v1.mk/sub?target=clash&url=${DYNAMIC_URL}"
+          URL2="https://sub.id9.cc/sub?target=clash&url=${DYNAMIC_URL}"
+          URL3="https://sub.tsutsu.one/sub?target=clash&url=${DYNAMIC_URL}"
+
+          echo "正在尝试后端 1..."
+          curl -L "$URL1" -H "User-Agent: Clash" -o config.yaml || \
+          (echo "后端 1 失败，尝试后端 2..." && curl -L "$URL2" -H "User-Agent: Clash" -o config.yaml) || \
+          (echo "后端 2 失败，尝试后端 3..." && curl -L "$URL3" -H "User-Agent: Clash" -o config.yaml) || \
+          (echo "所有转换后端均失效，直接下载原文件..." && curl -L "$DYNAMIC_URL" -o config.yaml)
 
       - name: 推送更新到仓库
         run: |
