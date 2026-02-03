@@ -1,4 +1,4 @@
-name: 半小时自动更新订阅
+name: 关键词定位精准抓取
 
 on:
   schedule:
@@ -12,24 +12,37 @@ jobs:
       - name: 检出仓库
         uses: actions/checkout@v3
 
-      - name: 强制下载指定订阅链接
+      - name: 定位关键词并下载配置
         run: |
-          # 使用你提供的最新 API 链接进行下载
-          # 添加 -L 是为了处理可能的重定向，-H 模拟用户代理防止被屏蔽
-          curl -L "https://TYH6nu.mcsslk.xyz/75beaaac43ce1d1e9ac811f854411a0b" \
-          -H "User-Agent: Clash" \
-          -o config.yaml
+          # 1. 下载原作者 README 源码
+          RAW_README=$(curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md)
           
-          # 检查文件是否下载成功
-          if [ ! -s config.yaml ]; then
-            echo "错误：下载内容为空，请检查原始链接是否失效"
+          # 2. 定位“🚀免费Clash订阅链接”文字的下一行，并提取 URL
+          # 使用 grep 过滤掉可能的 HTML 标签，只取 https 开头的纯链接
+          DYNAMIC_URL=$(echo "$RAW_README" | grep -A 1 "🚀免费Clash订阅链接" | grep -oE "https://[a-zA-Z0-9./_-]+")
+          
+          echo "定位到的原始链接为: $DYNAMIC_URL"
+          
+          if [ -z "$DYNAMIC_URL" ]; then
+            echo "错误：无法根据关键词定位链接"
             exit 1
           fi
 
-      - name: 推送更新到仓库
+          # 3. 关键：在链接末尾添加 Clash 标志，确保返回的是完整配置文件
+          # 如果原链接已带参数就用 &，没带就用 ?
+          if [[ "$DYNAMIC_URL" == *"?"* ]]; then
+            FINAL_URL="${DYNAMIC_URL}&flag=clash"
+          else
+            FINAL_URL="${DYNAMIC_URL}?flag=clash"
+          fi
+
+          # 4. 下载内容并存为 config.yaml
+          curl -L "$FINAL_URL" -H "User-Agent: Clash" -o config.yaml
+
+      - name: 推送更新
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Action"
           git add config.yaml
-          git commit -m "自动同步最新 API 节点: $(date)" || echo "内容无变化"
+          git commit -m "同步动态节点: $(date)" || echo "内容无变化"
           git push
