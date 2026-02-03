@@ -2,7 +2,6 @@ name: 半小时自动更新订阅
 
 on:
   schedule:
-    # 每 30 分钟运行一次
     - cron: '*/30 * * * *'
   workflow_dispatch: 
 
@@ -13,21 +12,24 @@ jobs:
       - name: 检出仓库
         uses: actions/checkout@v3
 
-      - name: 直接下载目标文件
+      - name: 强制下载指定订阅链接
         run: |
-          # 直接下载原作者仓库里的 clash.yaml
-          curl -L "https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/clash.yaml" -o config.yaml
+          # 使用你提供的最新 API 链接进行下载
+          # 添加 -L 是为了处理可能的重定向，-H 模拟用户代理防止被屏蔽
+          curl -L "https://TYH6nu.mcsslk.xyz/75beaaac43ce1d1e9ac811f854411a0b" \
+          -H "User-Agent: Clash" \
+          -o config.yaml
           
-          # 检查文件是否下载成功（大小是否大于1KB）
+          # 检查文件是否下载成功
           if [ ! -s config.yaml ]; then
-            echo "错误：下载的文件为空"
+            echo "错误：下载内容为空，请检查原始链接是否失效"
             exit 1
           fi
 
-      - name: 推送到我的仓库
+      - name: 推送更新到仓库
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Action"
           git add config.yaml
-          # 只有在内容有变动时才提交，避免报错
-          git diff --quiet && git diff --staged --quiet || (git commit -m "自动同步: $(date)" && git push)
+          git commit -m "自动同步最新 API 节点: $(date)" || echo "内容无变化"
+          git push
