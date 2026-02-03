@@ -14,33 +14,27 @@ jobs:
 
       - name: 抓取并清洗链接
         run: |
-          # 1. 下载原作者 README
+          # 1. 获取原作者 README
           RAW_README=$(curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md)
           
-          # 2. 提取链接并彻底清洗回车符/空格
-          # tr -d '\r' 用来删掉 Windows 格式的回车
+          # 2. 提取最新动态链接并清洗特殊字符
           DYNAMIC_URL=$(echo "$RAW_README" | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+" | head -n 1 | tr -d '\r' | xargs)
           
-          echo "清洗后的最新链接: |$DYNAMIC_URL|"
+          echo "捕获到的真实地址: $DYNAMIC_URL"
           
           if [ -z "$DYNAMIC_URL" ]; then
-            echo "错误：未能解析到有效链接"
+            echo "错误：未能在页面解析到链接"
             exit 1
           fi
 
-          # 3. 强制添加 Clash 标志以获取真实节点（非公告）
-          # 使用 API 转换确保万无一失
-          FINAL_URL="https://api.v1.mk/sub?target=clash&url=${DYNAMIC_URL}&insert=false"
-          
-          echo "最终下载地址: $FINAL_URL"
-          
-          # 4. 下载并覆盖
-          curl -L "$FINAL_URL" -H "User-Agent: Clash" -o config.yaml
+          # 3. 直接下载原始内容（不通过第三方转换器，减少报错几率）
+          # 使用 Clash 的 User-Agent 骗过对方服务器，确保拿到配置
+          curl -L "$DYNAMIC_URL" -H "User-Agent: Clash" -o config.yaml
 
       - name: 推送更新
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Action"
           git add config.yaml
-          git commit -m "同步真实节点: $(date)" || echo "内容无变化"
+          git commit -m "同步原始节点: $(date)" || echo "内容无变化"
           git push
