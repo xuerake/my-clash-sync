@@ -1,4 +1,4 @@
-name: 自动动态同步订阅
+name: 订阅自动修复与同步
 
 on:
   schedule:
@@ -12,29 +12,32 @@ jobs:
       - name: 检出仓库
         uses: actions/checkout@v3
 
-      - name: 抓取并清洗链接
+      - name: 抓取并强制转换格式
         run: |
-          # 1. 获取原作者 README
+          # 1. 获取原作者最新的动态链接
           RAW_README=$(curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md)
-          
-          # 2. 提取最新动态链接并清洗特殊字符
           DYNAMIC_URL=$(echo "$RAW_README" | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+" | head -n 1 | tr -d '\r' | xargs)
           
-          echo "捕获到的真实地址: $DYNAMIC_URL"
+          echo "捕获到的原始链接: $DYNAMIC_URL"
           
           if [ -z "$DYNAMIC_URL" ]; then
-            echo "错误：未能在页面解析到链接"
+            echo "错误：未能解析到有效链接"
             exit 1
           fi
 
-          # 3. 直接下载原始内容（不通过第三方转换器，减少报错几率）
-          # 使用 Clash 的 User-Agent 骗过对方服务器，确保拿到配置
-          curl -L "$DYNAMIC_URL" -H "User-Agent: Clash" -o config.yaml
+          # 2. 使用第三方后端进行强制转换 (转换至标准 Clash 格式)
+          # 这样可以解决缩进错误、非法字符以及占位符节点问题
+          CONVERT_URL="https://api.v1.mk/sub?target=clash&url=${DYNAMIC_URL}&insert=false&emoji=true&list=false&tfo=false&scv=false&fdn=false&sort=false"
+          
+          echo "正在通过转换器下载: $CONVERT_URL"
+          
+          # 下载并保存，如果下载失败则重试一次
+          curl -L "$CONVERT_URL" -H "User-Agent: Clash" -o config.yaml || curl -L "$DYNAMIC_URL" -o config.yaml
 
       - name: 推送更新
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Action"
           git add config.yaml
-          git commit -m "同步原始节点: $(date)" || echo "内容无变化"
+          git commit -m "自动修复并同步: $(date)" || echo "内容无变化"
           git push
