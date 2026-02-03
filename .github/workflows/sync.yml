@@ -1,4 +1,4 @@
-name: 1半小时精准抓取最新订阅
+name: 自动动态同步订阅
 
 on:
   schedule:
@@ -12,25 +12,25 @@ jobs:
       - name: 检出仓库
         uses: actions/checkout@v3
 
-      - name: 抓取并转换配置
+      - name: 动态解析最新链接
         run: |
           # 1. 获取原作者 README 原始文本
           RAW_README=$(curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md)
           
-          # 2. 精准定位“🚀免费Clash订阅链接”文字后的 https 链接
-          # 无论域名怎么变，只要在这一行下面就能抓到
-          DYNAMIC_URL=$(echo "$RAW_README" | grep -A 2 "🚀免费Clash订阅链接" | grep -oE "https://[a-zA-Z0-9./_-]+")
+          # 2. 改进的提取逻辑：直接在全文寻找包含 mcsslk.xyz 的 https 链接
+          # 这种方式不依赖行数，只要链接在页面上就能抓到
+          DYNAMIC_URL=$(echo "$RAW_README" | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+")
           
-          echo "检测到当前最新链接: $DYNAMIC_URL"
+          echo "捕获到的最新动态链接: $DYNAMIC_URL"
           
           if [ -z "$DYNAMIC_URL" ]; then
-            echo "错误：未能在页面找到链接"
+            echo "错误：未能解析到动态域名链接"
             exit 1
           fi
 
-          # 3. 使用转换参数确保获取的是真实的 Clash YAML 节点，而非公告信息
-          # 这样可以强制 API 返回可用的节点列表
-          curl -L "${DYNAMIC_URL}?flag=clash" -H "User-Agent: Clash" -o config.yaml
+          # 3. 下载并存为 config.yaml
+          # 注意：直接下载该链接内容。如果导入 Clash 仍无节点，可尝试在 URL 后加 &flag=clash
+          curl -L "$DYNAMIC_URL" -H "User-Agent: Clash" -o config.yaml
 
       - name: 推送更新
         run: |
