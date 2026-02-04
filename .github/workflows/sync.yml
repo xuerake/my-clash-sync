@@ -17,11 +17,12 @@ jobs:
           # 1. mksshare (使用你指定的 io 地址)
           curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+" | head -n 1 | tr -d '\r' | xargs > link.txt
 
-          # 2. abshare
-          curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md | grep -o 'https://[^ ]*absslk\.xyz[^ ]*' | head -n 1 | tr -d '\r' | xargs > link_abshare.txt
-
-          # 3. tolinkshare2
-          curl -s https://raw.githubusercontent.com/tolinkshare2/tolinkshare2.github.io/main/README.md | grep -o 'https://[^ ]*tosslk\.xyz[^ ]*' | head -n 1 | tr -d '\r' | xargs > link_tolinkshare2.txt
+          # 2. 提取 abshare
+          # 访问其 README 并抓取包含域名关键词的链接
+          curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md | grep -o 'https://[^ ]*mcsslk\.xyz[^ ]*' | head -n 1 > link_abshare.txt
+          
+          # 3. 提取 tolinkshare2
+          curl -s https://raw.githubusercontent.com/tolinkshare2/tolinkshare2.github.io/main/README.md | grep -o 'https://[^ ]*mcsslk\.xyz[^ ]*' | head -n 1 > link_tolinkshare2.txt
 
       - name: Commit and Push
         run: |
