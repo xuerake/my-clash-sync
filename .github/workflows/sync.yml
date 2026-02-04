@@ -2,8 +2,11 @@ name: 动态订阅链接纯净同步
 
 on:
   schedule:
-    - cron: '*/10 * * * *' # 每10分钟执行一次更新
-  workflow_dispatch:      # 允许手动点击运行
+    # 核心：每 10 分钟运行一次 (Cron 表达式)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:      # 保留手动按钮
+  push:                   # 每次推代码也运行一次
+    branches: [ main ]
 
 permissions:
   contents: write         # 允许脚本修改仓库文件
