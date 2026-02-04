@@ -14,29 +14,27 @@ jobs:
 
       - name: Extract Links
         run: |
-          # 1. 获取原作者最新的动态链接
+          # 1. 获取 mksshare (使用你提供的原作者 io 地址)
           RAW_README=$(curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md)
           DYNAMIC_URL=$(echo "$RAW_README" | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+" | head -n 1 | tr -d '\r' | xargs)
           
-          echo "捕获到的链接: $DYNAMIC_URL"
-          
-          if [ -z "$DYNAMIC_URL" ]; then
-            echo "未能获取链接，跳过更新"
-            exit 1
+          if [ -n "$DYNAMIC_URL" ]; then
+            echo "捕获到的链接: $DYNAMIC_URL"
+            echo "$DYNAMIC_URL" > link.txt
+          else
+            echo "未能获取 mksshare，跳过"
           fi
-          echo "$DYNAMIC_URL" > link.txt
           
-          # 2. 提取 abshare (已确认成功)
-          curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md | grep -o 'https://[^"]*absslk\.xyz[^"]*' | head -n 1 | sed 's/)$//' > link_abshare.txt
+          # 2. 提取 abshare (改用 [^ ]* 匹配空格截断，兼容性最强)
+          curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md | grep -o 'https://[^ ]*absslk\.xyz[^ ]*' | head -n 1 | tr -d '\r' | xargs > link_abshare.txt
           
-          # 3. 提取 tolinkshare2 (已确认成功)
-          curl -s https://raw.githubusercontent.com/tolinkshare2/tolinkshare2.github.io/main/README.md | grep -o 'https://[^"]*tosslk\.xyz[^"]*' | head -n 1 | sed 's/)$//' > link_tolinkshare2.txt
+          # 3. 提取 tolinkshare2 (改用 [^ ]* 匹配空格截断)
+          curl -s https://raw.githubusercontent.com/tolinkshare2/tolinkshare2.github.io/main/README.md | grep -o 'https://[^ ]*tosslk\.xyz[^ ]*' | head -n 1 | tr -d '\r' | xargs > link_tolinkshare2.txt
 
       - name: Commit and Push
         run: |
           git config --global user.name "Link Bot"
           git config --global user.email "bot@github.com"
           git add link.txt link_abshare.txt link_tolinkshare2.txt
-          # 确保只有文件存在且不为空时才进行 commit 逻辑判断
           git commit -m "Update links: $(date)" || exit 0
           git push
