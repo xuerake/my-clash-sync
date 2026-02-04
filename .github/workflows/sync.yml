@@ -1,51 +1,32 @@
-name: 动态订阅链接纯净同步
+name: Multi-Subscription Link Sync
 
 on:
   schedule:
-    # 核心：每 10 分钟运行一次 (Cron 表达式)
     - cron: '*/10 * * * *'
-  workflow_dispatch:      # 保留手动按钮
-  push:                   # 每次推代码也运行一次
-    branches: [ main ]
-
-permissions:
-  contents: write         # 允许脚本修改仓库文件
+  workflow_dispatch:
 
 jobs:
-  update_data:
+  sync-links:
     runs-on: ubuntu-latest
     steps:
-      - name: 检出仓库内容
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: 抓取最新订阅链接
+      - name: Extract Links
         run: |
-          # 1. 提取 README 中的最新动态 URL
-          RAW_README=$(curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md)
-          DYNAMIC_URL=$(echo "$RAW_README" | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+" | head -n 1 | tr -d '\r' | xargs)
+          # 1. 提取 mksshare (域名关键词: mcsslk.xyz)
+          curl -s https://raw.githubusercontent.com/mcsslk/mksshare/main/README.md | grep -o 'https://[^ ]*mcsslk\.xyz[^ ]*' | head -n 1 > link.txt
           
-          echo "捕获到的 URL: $DYNAMIC_URL"
+          # 2. 提取 abshare (域名关键词: absslk.xyz)
+          curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md | grep -o 'https://[^ ]*absslk\.xyz[^ ]*' | head -n 1 > link_abshare.txt
           
-          if [ -n "$DYNAMIC_URL" ]; then
-            # 2. 仅保存为纯文本 link.txt
-            echo "$DYNAMIC_URL" > link.txt
-            
-            # 3. 生成符合 Clash 规范的静态跳转页
-            cat <<EOF > index.html
-            <html><head>
-            <meta http-equiv="refresh" content="0;url=${DYNAMIC_URL}">
-            <script>window.location.replace("${DYNAMIC_URL}");</script>
-            </head><body>正在跳转到最新订阅: <a href="${DYNAMIC_URL}">${DYNAMIC_URL}</a></body></html>
-          EOF
-          else
-            echo "未能提取到有效链接"
-            exit 1
-          fi
+          # 3. 提取 tolinkshare2 (域名关键词: tosslk.xyz)
+          curl -s https://raw.githubusercontent.com/tolinkshare2/tolinkshare2.github.io/main/README.md | grep -o 'https://[^ ]*tosslk\.xyz[^ ]*' | head -n 1 > link_tolinkshare2.txt
 
-      - name: 推送变更到仓库
+      - name: Commit and Push
         run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Action"
-          git add link.txt index.html
-          git commit -m "自动同步最新链接: $(date)" || echo "内容无变化"
+          git config --global user.name "Link Bot"
+          git config --global user.email "bot@github.com"
+          git add link.txt link_abshare.txt link_tolinkshare2.txt
+          git commit -m "Update links: $(date)" || exit 0
           git push
