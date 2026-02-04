@@ -2,8 +2,8 @@ name: Multi-Subscription Link Sync
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
-  workflow_dispatch:
+    - cron: '*/10 * * * *'  # 每 10 分钟自动运行
+  workflow_dispatch:        # 支持手动点击运行
 
 jobs:
   sync-links:
@@ -14,19 +14,20 @@ jobs:
 
       - name: Extract Links
         run: |
-          # 1. 增强版 mksshare 提取 (支持 mcsslk.xyz 及其可能变体)
+          # 1. 增强版 mksshare 提取：兼容不同子域名开头，精准匹配 mcsslk.xyz 路径
           curl -s https://raw.githubusercontent.com/mcsslk/mksshare/main/README.md | grep -oE 'https://[a-zA-Z0-9\.]+\.mcsslk\.xyz/[a-zA-Z0-9]+' | head -n 1 > link.txt
           
-          # 2. 提取 abshare (域名关键词: absslk.xyz)
-          curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md | grep -o 'https://[^ ]*absslk\.xyz[^ ]*' | head -n 1 > link_abshare.txt
+          # 2. 提取 abshare：匹配 absslk.xyz 域名格式
+          curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md | grep -oE 'https://[a-zA-Z0-9\.]+\.absslk\.xyz/[a-zA-Z0-9]+' | head -n 1 > link_abshare.txt
           
-          # 3. 提取 tolinkshare2 (域名关键词: tosslk.xyz)
-          curl -s https://raw.githubusercontent.com/tolinkshare2/tolinkshare2.github.io/main/README.md | grep -o 'https://[^ ]*tosslk\.xyz[^ ]*' | head -n 1 > link_tolinkshare2.txt
+          # 3. 提取 tolinkshare2：匹配 tosslk.xyz 域名格式
+          curl -s https://raw.githubusercontent.com/tolinkshare2/tolinkshare2.github.io/main/README.md | grep -oE 'https://[a-zA-Z0-9\.]+\.tosslk\.xyz/[a-zA-Z0-9]+' | head -n 1 > link_tolinkshare2.txt
 
       - name: Commit and Push
         run: |
           git config --global user.name "Link Bot"
           git config --global user.email "bot@github.com"
           git add link.txt link_abshare.txt link_tolinkshare2.txt
+          # 只有在内容真正变化时才提交，避免 0 字节文件被当作有效更新提交
           git commit -m "Update links: $(date)" || exit 0
           git push
