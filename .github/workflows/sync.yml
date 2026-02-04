@@ -2,7 +2,7 @@ name: 动态链接跳转更新
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch: 
 
 jobs:
