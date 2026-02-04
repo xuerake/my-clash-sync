@@ -28,6 +28,6 @@ jobs:
           git config --global user.name "Link Bot"
           git config --global user.email "bot@github.com"
           git add link.txt link_abshare.txt link_tolinkshare2.txt
-          # 使用 --allow-empty 确保哪怕没变化也不会报错导致流程中断
+          # 使用 --allow-empty 确保哪怕文件内容没变也会产生 commit，强制刷新时间戳
           git commit --allow-empty -m "Auto Update: $(date)"
           git push
