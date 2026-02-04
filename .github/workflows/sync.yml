@@ -12,23 +12,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Extract Links
+      - name: Extract All Links
         run: |
-          # 1. mksshare (使用你指定的 io 地址，失败也不准影响后面)
-          RAW_MKS=$(curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md)
-          echo "$RAW_MKS" | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+" | head -n 1 | tr -d '\r' | xargs > link.txt || echo "mks failed"
+          # 1. mksshare (使用你指定的 io 地址)
+          curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+" | head -n 1 | tr -d '\r' | xargs > link.txt
 
-          # 2. abshare (保持之前成功的格式)
-          curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md | grep -o 'https://[^ ]*absslk\.xyz[^ ]*' | head -n 1 | tr -d '\r' | xargs > link_abshare.txt || echo "abshare failed"
+          # 2. abshare
+          curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md | grep -o 'https://[^ ]*absslk\.xyz[^ ]*' | head -n 1 | tr -d '\r' | xargs > link_abshare.txt
 
-          # 3. tolinkshare2 (保持之前成功的格式)
-          curl -s https://raw.githubusercontent.com/tolinkshare2/tolinkshare2.github.io/main/README.md | grep -o 'https://[^ ]*tosslk\.xyz[^ ]*' | head -n 1 | tr -d '\r' | xargs > link_tolinkshare2.txt || echo "tolink2 failed"
+          # 3. tolinkshare2
+          curl -s https://raw.githubusercontent.com/tolinkshare2/tolinkshare2.github.io/main/README.md | grep -o 'https://[^ ]*tosslk\.xyz[^ ]*' | head -n 1 | tr -d '\r' | xargs > link_tolinkshare2.txt
 
       - name: Commit and Push
         run: |
           git config --global user.name "Link Bot"
           git config --global user.email "bot@github.com"
           git add link.txt link_abshare.txt link_tolinkshare2.txt
-          # 只要有任何文件变化就提交，没变化就优雅跳过
-          git commit -m "Update links: $(date)" || exit 0
+          # 使用 --allow-empty 确保哪怕没变化也不会报错导致流程中断
+          git commit --allow-empty -m "Auto Update: $(date)"
           git push
