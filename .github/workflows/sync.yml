@@ -14,27 +14,41 @@ jobs:
 
       - name: Extract Links
         run: |
-          # 1. 获取 mksshare (使用你提供的原作者 io 地址)
-          RAW_README=$(curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md)
-          DYNAMIC_URL=$(echo "$RAW_README" | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+" | head -n 1 | tr -d '\r' | xargs)
-          
-          if [ -n "$DYNAMIC_URL" ]; then
-            echo "捕获到的链接: $DYNAMIC_URL"
-            echo "$DYNAMIC_URL" > link.txt
+          # --- 1. 获取 mksshare (使用你验证成功的 io 地址) ---
+          RAW_README_1=$(curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md)
+          URL_1=$(echo "$RAW_README_1" | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+" | head -n 1 | tr -d '\r' | xargs)
+          if [ -z "$URL_1" ]; then
+            echo "mksshare 抓取结果为空，保留旧文件"
           else
-            echo "未能获取 mksshare，跳过"
+            echo "$URL_1" > link.txt
+            echo "成功捕获 mksshare: $URL_1"
           fi
-          
-          # 2. 提取 abshare (改用 [^ ]* 匹配空格截断，兼容性最强)
-          curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md | grep -o 'https://[^ ]*absslk\.xyz[^ ]*' | head -n 1 | tr -d '\r' | xargs > link_abshare.txt
-          
-          # 3. 提取 tolinkshare2 (改用 [^ ]* 匹配空格截断)
-          curl -s https://raw.githubusercontent.com/tolinkshare2/tolinkshare2.github.io/main/README.md | grep -o 'https://[^ ]*tosslk\.xyz[^ ]*' | head -n 1 | tr -d '\r' | xargs > link_tolinkshare2.txt
+
+          # --- 2. 获取 abshare (保持你确认成功的简单匹配) ---
+          RAW_README_2=$(curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md)
+          URL_2=$(echo "$RAW_README_2" | grep -o 'https://[^ ]*absslk\.xyz[^ ]*' | head -n 1 | tr -d '\r' | xargs)
+          if [ -z "$URL_2" ]; then
+            echo "abshare 抓取结果为空"
+          else
+            echo "$URL_2" > link_abshare.txt
+            echo "成功捕获 abshare: $URL_2"
+          fi
+
+          # --- 3. 获取 tolinkshare2 (保持你确认成功的简单匹配) ---
+          RAW_README_3=$(curl -s https://raw.githubusercontent.com/tolinkshare2/tolinkshare2.github.io/main/README.md)
+          URL_3=$(echo "$RAW_README_3" | grep -o 'https://[^ ]*tosslk\.xyz[^ ]*' | head -n 1 | tr -d '\r' | xargs)
+          if [ -z "$URL_3" ]; then
+            echo "tolinkshare2 抓取结果为空"
+          else
+            echo "$URL_3" > link_tolinkshare2.txt
+            echo "成功捕获 tolinkshare2: $URL_3"
+          fi
 
       - name: Commit and Push
         run: |
           git config --global user.name "Link Bot"
           git config --global user.email "bot@github.com"
           git add link.txt link_abshare.txt link_tolinkshare2.txt
+          # 只要有任何文件变化就提交，没变化则优雅退出
           git commit -m "Update links: $(date)" || exit 0
           git push
