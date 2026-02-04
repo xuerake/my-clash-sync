@@ -14,8 +14,8 @@ jobs:
 
       - name: Extract Links
         run: |
-          # 1. 提取 mksshare (域名关键词: mcsslk.xyz)
-          curl -s https://raw.githubusercontent.com/mcsslk/mksshare/main/README.md | grep -o 'https://[^ ]*mcsslk\.xyz[^ ]*' | head -n 1 > link.txt
+          # 1. 增强版 mksshare 提取 (支持 mcsslk.xyz 及其可能变体)
+          curl -s https://raw.githubusercontent.com/mcsslk/mksshare/main/README.md | grep -oE 'https://[a-zA-Z0-9\.]+\.mcsslk\.xyz/[a-zA-Z0-9]+' | head -n 1 > link.txt
           
           # 2. 提取 abshare (域名关键词: absslk.xyz)
           curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md | grep -o 'https://[^ ]*absslk\.xyz[^ ]*' | head -n 1 > link_abshare.txt
