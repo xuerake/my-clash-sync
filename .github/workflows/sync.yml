@@ -1,44 +1,48 @@
-name: 节点内容直连同步
+name: 动态订阅链接纯净同步
 
 on:
   schedule:
-    - cron: '*/10 * * * *' # 每10分钟更新一次，应对极短失效期
-  workflow_dispatch:      # 支持手动点击运行
+    - cron: '*/10 * * * *' # 每10分钟执行一次更新
+  workflow_dispatch:      # 允许手动点击运行
 
 permissions:
-  contents: write         # 必须显式开启写入权限
+  contents: write         # 允许脚本修改仓库文件
 
 jobs:
-  sync_config:
+  update_data:
     runs-on: ubuntu-latest
     steps:
       - name: 检出仓库内容
         uses: actions/checkout@v3
 
-      - name: 抓取最新动态 URL 并下载配置
+      - name: 抓取最新订阅链接
         run: |
-          # 1. 从原作者 README 提取最新链接
+          # 1. 提取 README 中的最新动态 URL
           RAW_README=$(curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md)
           DYNAMIC_URL=$(echo "$RAW_README" | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+" | head -n 1 | tr -d '\r' | xargs)
           
-          echo "捕获到的目标链接: $DYNAMIC_URL"
+          echo "捕获到的 URL: $DYNAMIC_URL"
           
-          if [ -z "$DYNAMIC_URL" ]; then
-            echo "错误：未抓取到有效链接"
+          if [ -n "$DYNAMIC_URL" ]; then
+            # 2. 仅保存为纯文本 link.txt
+            echo "$DYNAMIC_URL" > link.txt
+            
+            # 3. 生成符合 Clash 规范的静态跳转页
+            cat <<EOF > index.html
+            <html><head>
+            <meta http-equiv="refresh" content="0;url=${DYNAMIC_URL}">
+            <script>window.location.replace("${DYNAMIC_URL}");</script>
+            </head><body>正在跳转到最新订阅: <a href="${DYNAMIC_URL}">${DYNAMIC_URL}</a></body></html>
+          EOF
+          else
+            echo "未能提取到有效链接"
             exit 1
           fi
 
-          # 2. 核心突破：模拟 Clash 客户端直接下载节点数据内容
-          # 这一步将解决你之前遇到的 config 为空或 invalid yaml 的问题
-          curl -L -k -A "Clash" "$DYNAMIC_URL" -o config.yaml
-
-          # 3. 记录链接用于备查
-          echo "$DYNAMIC_URL" > link.txt
-
-      - name: 推送变更到 GitHub 仓库
+      - name: 推送变更到仓库
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Action"
-          git add config.yaml link.txt
-          git commit -m "同步节点数据: $(date)" || echo "内容无变化，跳过提交"
+          git add link.txt index.html
+          git commit -m "自动同步最新链接: $(date)" || echo "内容无变化"
           git push
