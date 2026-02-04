@@ -14,8 +14,17 @@ jobs:
 
       - name: Extract Links
         run: |
-          # 1. 终极兼容提取 mksshare：匹配任何包含 mcsslk.xyz 的 https 链接
-          curl -s https://raw.githubusercontent.com/mcsslk/mksshare/main/README.md | grep -o 'https://[^"]*mcsslk\.xyz[^"]*' | head -n 1 | sed 's/)$//' > link.txt
+          # 1. 获取原作者最新的动态链接
+          RAW_README=$(curl -s https://raw.githubusercontent.com/mksshare/mksshare.github.io/main/README.md)
+          DYNAMIC_URL=$(echo "$RAW_README" | grep -oE "https://[a-zA-Z0-9.-]+\.mcsslk\.xyz/[a-zA-Z0-9]+" | head -n 1 | tr -d '\r' | xargs)
+          
+          echo "捕获到的链接: $DYNAMIC_URL"
+          
+          if [ -z "$DYNAMIC_URL" ]; then
+            echo "未能获取链接，跳过更新"
+            exit 1
+          fi
+          echo "$DYNAMIC_URL" > link.txt
           
           # 2. 提取 abshare (已确认成功)
           curl -s https://raw.githubusercontent.com/abshare/abshare.github.io/main/README.md | grep -o 'https://[^"]*absslk\.xyz[^"]*' | head -n 1 | sed 's/)$//' > link_abshare.txt
